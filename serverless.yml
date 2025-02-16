@@ -1,0 +1,40 @@
+service: ffmpeg-lambda
+provider:
+  region: us-west-2
+  name: aws
+  stage: dev # dev, qa, prod
+  runtime: provided.al2
+  memorySize: 10240
+  timeout: 900
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:GetObject"
+      Resource:
+        - "arn:aws:s3:::${self:custom.sourceBucket}/*"
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+      Resource:
+        - "arn:aws:s3:::${self:custom.destinationBucket}/*"
+
+custom:
+  sourceBucket: aai-test-video-input
+  destinationBucket: aai-test-video-output
+
+functions:
+  processVideo:
+    image: <aws_account_id>.dkr.ecr.us-west-2.amazonaws.com/ffmpeg-lambda:latest
+    events:
+      - s3:
+          bucket: ${self:custom.sourceBucket}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .mp4
+
+resources:
+  Resources:
+    DestinationBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.destinationBucket}
